@@ -152,7 +152,3 @@ workflows:
         context: org-devstage-dev
         requires:
         - build-master
-
-    jobs:
-    - build:
-        context: org-default-build
