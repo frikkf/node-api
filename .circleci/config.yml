@@ -141,7 +141,6 @@ workflows:
     jobs:
     - build:
         name: build-master
-        context: org-default-build
         filters:
           branches:
             only:
@@ -149,6 +148,5 @@ workflows:
     - push:
         name: push-master
         is-feature-branch: false
-        context: org-devstage-dev
         requires:
         - build-master
