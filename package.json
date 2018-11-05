@@ -1,0 +1,11 @@
+{
+  "name": "node-api",
+  "version": "1.0.0",
+  "description": "Demo devops",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Frikk Fossan",
+  "license": "ISC"
+}
