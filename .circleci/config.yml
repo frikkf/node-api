@@ -109,10 +109,14 @@ jobs:
         - Dockerfile
         - helm/node-api/
 
+    - run: *remove-feature-slash-from-branch-name
+    - run: *get-current-image-version
+    - run: *create-image
+
   push:
     docker:
         - image: circleci/node:7.10
-        
+
     environment:
       TERM: dumb
 
