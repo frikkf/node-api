@@ -1,0 +1,14 @@
+apiVersion: v1
+name: node-api
+version: '1'
+appVersion: 1
+description: A node api
+keywords:
+- node
+- rest api
+sources:
+- https://github.com/frikkf/node-api
+maintainers:
+- name: 'Frikk Fossan'
+  email: f.fossan@acando.no
+engine: gotpl

@@ -1,0 +1,17 @@
+replicas: 2
+image: frifos/node-api
+imageTag: master-v1
+imagePullPolicy: Always
+appname: node-api
+service:
+  name: node-api
+  type: LoadBalancer
+  externalPort: 80
+  internalPort: 3000
+resources:
+  cpuLimit: 1000m
+  memLimit: 768Mi
+  cpuRequest: 100m
+  memRequest: 512Mi
+  xmx: 512m
+

@@ -2,10 +2,10 @@ var Koa = require('koa');
 
 var app = new Koa();
 
-app.use(function(ctx, next){
-  console.log("Got request");
-  ctx.body = 'Hello from Node API devops guide';
+app.use(async ctx => {
+  ctx.body = 'Hello World';
 });
+
 
 const port = process.env.PORT ? process.env.PORT : 3000
 
