@@ -4,8 +4,11 @@
   "description": "Demo devops",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "start": "node index.js"
   },
   "author": "Frikk Fossan",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "koa": "^2.6.1"
+  }
 }
