@@ -110,6 +110,9 @@ jobs:
         - helm/node-api/
 
   push:
+    docker:
+        - image: circleci/node:7.10
+        
     environment:
       TERM: dumb
 
