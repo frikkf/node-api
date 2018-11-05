@@ -60,8 +60,8 @@ aliases:
 - &upload-image
   name: Upload image to GCR
   command: |
-    docker login -u _json_key --password-stdin https://eu.gcr.io < ${HOME}/account-auth.json
-    docker push eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/$CIRCLE_PROJECT_REPONAME:$BRANCH_IMAGE_NAME-$VERSION
+    docker login -u $docker-user -p $docker-psw
+    docker push frifos/$CIRCLE_PROJECT_REPONAME:$BRANCH_IMAGE_NAME-$VERSION
 
 - &git-update-helm-chart
   name: Update helm chart with new version
@@ -90,7 +90,7 @@ jobs:
       # specify the version you desire here
       - image: circleci/node:chakracore-10.6.0-browsers
       # documented at https://circleci.com/docs/2.0/circleci-images/
-    
+    context: account-docker
     working_directory: ~/repo
     
     steps:
@@ -118,4 +118,3 @@ jobs:
     - run: *get-next-image-version
     - run: *git-update-helm-chart
     - run: *git-push-next-version
-    
