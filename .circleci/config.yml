@@ -111,6 +111,8 @@ jobs:
 
     - run: *remove-feature-slash-from-branch-name
     - run: *get-current-image-version
+    - setup_remote_docker:
+        docker_layer_caching: true
     - run: *create-image
 
   push:
