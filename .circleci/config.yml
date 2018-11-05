@@ -1,33 +1,158 @@
-# Javascript Node CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/language-javascript/ for more details
-#
 version: 2
+aliases:
+- &restore-source-code
+  keys:
+  - source-{{ .Branch }}-{{ .Revision }}
+  - source-{{ .Branch }}
+  - source-master-
+
+- &save-source-code
+  key: source-{{ .Branch }}-{{ .Revision }}
+  paths:
+  - ".git"
+
+- &restore-cache
+  keys:
+  - v1-dependencies-{{ checksum "package.json" }}
+  # fallback to using the latest cache if no exact match is found
+  - v1-dependencies-
+
+- &save-cache
+  paths:
+    - node_modules
+  key: v1-dependencies-{{ checksum "package.json" }}
+
+- &build
+  name: Build
+  command: npm install
+
+- &remove-feature-slash-from-branch-name
+  name: Remove feature/ from branch name
+  command: |
+    echo $CIRCLE_BRANCH
+    strippedBranchName=$(echo $CIRCLE_BRANCH | sed -e 's/feature\///g')
+    echo "export BRANCH_IMAGE_NAME=$strippedBranchName" >> $BASH_ENV
+
+- &get-current-image-version
+  name: Get current image version
+  command: |
+    cd helm
+    currentHelmImageTag=$(grep -e 'imageTag: ' ./node-api/values.yaml)
+    currentVersion=$(echo $currentHelmImageTag | grep -o '[0-9].*$')
+    echo "export VERSION=$currentVersion"  >> $BASH_ENV
+
+- &get-next-image-version
+  name: Get new image version
+  command: |
+    cd helm
+    currentHelmImageTag=$(grep -e 'imageTag: ' ./node-api/values.yaml)
+    currentVersion=$(echo $currentHelmImageTag | grep -o '[0-9].*$')
+    nextVersionPatchNumber=$(($(echo $currentVersion | grep -o '[0-9]*$')+1))
+    staticVersion=$(echo $currentVersion | grep -o '[0-9].[0-9].')
+    echo "export NEXTVERSION=$staticVersion$nextVersionPatchNumber"  >> $BASH_ENV
+
+- &create-image
+  name: Create Docker image
+  command: |
+    echo "creating image $BRANCH_IMAGE_NAME-$VERSION"
+    docker build -t frifos/$CIRCLE_PROJECT_REPONAME:$BRANCH_IMAGE_NAME-$VERSION .
+
+- &upload-image
+  name: Upload image to GCR
+  command: |
+    docker login -u _json_key --password-stdin https://eu.gcr.io < ${HOME}/account-auth.json
+    docker push eu.gcr.io/${CLOUDSDK_CORE_PROJECT}/$CIRCLE_PROJECT_REPONAME:$BRANCH_IMAGE_NAME-$VERSION
+
+- &git-update-helm-chart
+  name: Update helm chart with new version
+  command: |
+    cd helm
+    sed -i "s/version:.*$/version: '$NEXTVERSION'/g"  ./node-api/Chart.yaml
+    sed -i "s/appVersion:.*$/appVersion: '$CIRCLE_BRANCH-$NEXTVERSION'/g"  ./node-api/Chart.yaml
+    sed -i "s/imageTag:.*$/imageTag: $CIRCLE_BRANCH-$NEXTVERSION/g"  ./node-api/values.yaml
+
+- &git-push-next-version
+  name: Push to repository
+  command: |
+    git config --global user.email "frikk.fossan@acando.no"
+    git config --global user.name "Frikk Fossan"
+    git add helm/node-api/Chart.yaml
+    git add helm/node-api/values.yaml
+    git commit -m "Helm Update [ci skip]"
+    git tag -a $BRANCH_IMAGE_NAME-$VERSION -m "Updated Tag"
+    git status
+    git push
+    git push origin $CIRCLE_BRANCH-$VERSION
+
 jobs:
   build:
     docker:
       # specify the version you desire here
       - image: circleci/node:chakracore-10.6.0-browsers
       # documented at https://circleci.com/docs/2.0/circleci-images/
- 
+    steps:
+    - restore_cache: *restore-source-code
+    - checkout
+    - save_cache: *save-source-code
 
-    working_directory: ~/repo
+    - restore_cache: *restore-cache
+
+    - run: *build
+    - save_cache: *save-cache
+
+    - persist_to_workspace:
+        root: .
+        paths:
+        - Dockerfile
+        - helm/node-api/
+
+  push:
+    parameters:
+
+    environment:
+      TERM: dumb
 
     steps:
-      - checkout
+    - restore_cache: *restore-source-code
+    - checkout
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+    - setup_remote_docker:
+        docker_layer_caching: true
 
-      - run: npm install
+    - attach_workspace:
+        at: .
 
-      - save_cache:
-          paths:
-            - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
+    - run: *remove-feature-slash-from-branch-name
+    - run: *get-current-image-version
 
+    - run: *create-image
 
+    - run: *upload-image
+    - run: *get-next-image-version
+    - run: *git-update-helm-chart
+    - run: *git-push-next-version
+    - persist_to_workspace:
+        root: .
+        paths:
+        - helm/
+
+workflows:
+  main:
+    jobs:
+    - build:
+        name: build-master
+        context: org-default-build
+        filters:
+          branches:
+            only:
+            - master
+    - push:
+        name: push-master
+        is-feature-branch: false
+        context: org-devstage-dev
+        requires:
+        - build-master
+
+    jobs:
+    - build:
+        context: org-default-build
