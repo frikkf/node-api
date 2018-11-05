@@ -90,6 +90,9 @@ jobs:
       # specify the version you desire here
       - image: circleci/node:chakracore-10.6.0-browsers
       # documented at https://circleci.com/docs/2.0/circleci-images/
+    
+    working_directory: ~/repo
+    
     steps:
     - restore_cache: *restore-source-code
     - checkout
@@ -107,8 +110,6 @@ jobs:
         - helm/node-api/
 
   push:
-    parameters:
-
     environment:
       TERM: dumb
 
@@ -135,18 +136,3 @@ jobs:
         root: .
         paths:
         - helm/
-
-workflows:
-  main:
-    jobs:
-    - build:
-        name: build-master
-        filters:
-          branches:
-            only:
-            - master
-    - push:
-        name: push-master
-        is-feature-branch: false
-        requires:
-        - build-master
